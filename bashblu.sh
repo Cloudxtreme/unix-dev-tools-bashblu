@@ -7,8 +7,8 @@ download_template() {
   local output_dir="$2"
   local script_name="$3"
 
-  local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/$(version)/templates/"
-  debug "downloading $template_name to $output_dir"
+  local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
+  debug "downloading $base_uri/$template_name to $output_dir/${script_name}.sh"
   curl -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output_dir/${script_name}.sh"
 }
 
@@ -68,11 +68,11 @@ main() {
   local project="false"
   local output_dir=""
 
-  local script_name="$1";
+  local script_name=""
   while [ "$1" != "" ]; do
-    local param=`echo $1 | awk -F= '{print $1}'`
-    local value=`echo $1 | awk -F= '{print $2}'`
-    case $param in
+    local param="$1"
+    local value="$2"
+    case "$param" in
       -h | --help)
         usage
         exit 0
@@ -84,16 +84,19 @@ main() {
       -p | --project)
         project="true"
         ;;
-      -c | --create)
+      -o | --output)
         output_dir="$value"
+        shift
         ;;
       *)
-        if [ -z "$script_name" ]; then
+        if [ "${param::1}" == '-' ]; then
           echo "ERROR: unknown parameter \"$param\""
           usage
           exit 1
         fi
-        script_name="${param/\.sh}"
+        if [ -z "$script_name" ]; then
+          script_name="${param/\.sh}"
+        fi
         ;;
     esac
     shift
@@ -104,13 +107,13 @@ main() {
   fi 
 
   if [ "$project" == "true" ]; then
-    download_template 'project-script.sh' "$output_dir" "${script_name}" || fatal 'failed to download script template' 
+    download_template 'project-script.sh' "$output_dir" "$script_name" || fatal 'failed to download script template' 
     chmod +x "$output_dir/${script_name}.sh" || fatal 'unable to make script exectuable'
     if [ ! -f "$VERSION" ]; then
       echo '1.0.0' > "$output_dir/VERSION"
     fi
   else
-    download_template 'standalone-script.sh' "$output_dir" "${script_name}" || fatal 'failed to download script template' 
+    download_template 'standalone-script.sh' "$output_dir" "$script_name" || fatal 'failed to download script template' 
     chmod +x "$output_dir/${script_name}.sh" || fatal 'unable to make script exectuable'
   fi
 }

@@ -39,6 +39,7 @@ usage(){
   echo '  -s, --say          an example arg with a value'
   echo '  -h, --help         print this help text'
   echo '  -v, --version      print the version'
+  echo ''
 }
 
 version(){
