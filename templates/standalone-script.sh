@@ -32,21 +32,17 @@ script_directory(){
 }
 
 usage(){
-  echo 'USAGE: [script-name] <some-arg>'
+  echo 'USAGE: [script-name].sh <some-arg>'
   echo ''
   echo 'Arguments:'
   echo '  -a, --arg          an example arg'
   echo '  -s, --say          an example arg with a value'
   echo '  -h, --help         print this help text'
   echo '  -v, --version      print the version'
-  echo ''
 }
 
 version(){
-  local directory="$(script_directory)"
-  local version=$(cat "$directory/VERSION")
-
-  echo "$version"
+  echo "1.0.0"
 }
 
 main() {

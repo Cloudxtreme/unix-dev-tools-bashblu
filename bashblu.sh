@@ -106,10 +106,14 @@ main() {
     output_dir="$PWD"
   fi 
 
+  if [ -f "$output_dir/${script_name}.sh" ]; then
+    fatal 'script already exists' 
+  fi
+
   if [ "$project" == "true" ]; then
     download_template 'project-script.sh' "$output_dir" "$script_name" || fatal 'failed to download script template' 
     chmod +x "$output_dir/${script_name}.sh" || fatal 'unable to make script exectuable'
-    if [ ! -f "$VERSION" ]; then
+    if [ ! -f "$output_dir/VERSION" ]; then
       echo '1.0.0' > "$output_dir/VERSION"
     fi
   else
