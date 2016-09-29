@@ -107,7 +107,7 @@ main() {
   done
 
   if [ -z "$output" ]; then
-    output_dir="$PWD/${script_name}.sh"
+    output="$PWD/${script_name}.sh"
   fi
 
   if [ -f "$output" ]; then
