@@ -1,18 +1,23 @@
 #!/bin/bash
 
-DEBUG_KEY='[script-name]'
-
 debug() {
+  local debug_key='[script-name]'
+  local cyan='\033[0;36m'
+  local no_color='\033[0;0m'
   if [ -z "$DEBUG" ]; then
     return 0
   fi
-  local message="$1"
-  echo "$DEBUG_KEY: $message"
+  echo "$debug_key" | grep $DEBUG 2> /dev/null
+  if [ "$?" != "0" ]; then
+    return 0
+  fi
+  local message="$@"
+  (>&2 echo -e "[${cyan}${debug_key}${no_color}]: $message")
 }
 
 fatal() {
   local message="$1"
-  echo "Error: $message"
+  (>&2 echo "Error: $message")
   exit 1
 }
 
@@ -32,27 +37,26 @@ script_directory(){
 }
 
 usage(){
-  echo 'USAGE: [script-name] <some-arg>'
+  echo 'USAGE: [script-name]'
   echo ''
   echo 'Arguments:'
-  echo '  -a, --arg          an example arg'
-  echo '  -s, --say          an example arg with a value'
   echo '  -h, --help         print this help text'
   echo '  -v, --version      print the version'
+  echo 'Environment:'
+  echo '  DEBUG              print debug output'
 }
 
 version(){
   local directory="$(script_directory)"
-  local version=$(cat "$directory/VERSION")
 
-  echo "$version"
+  if [ -f "$directory/VERSION" ]; then
+    cat "$directory/VERSION"
+  else
+    echo "unknown"
+  fi
 }
 
 main() {
-  local arg="false"
-  local say=""
-
-  local some_arg="$1";
   while [ "$1" != "" ]; do
     local param="$1"
     local value="$2"
@@ -65,30 +69,19 @@ main() {
         version
         exit 0
         ;;
-      -a | --arg)
-        arg="true"
-        ;;
-      -s | --say)
-        say="$value"
-        shift
-        ;;
       *)
         if [ "${param::1}" == '-' ]; then
           echo "ERROR: unknown parameter \"$param\""
           usage
           exit 1
         fi
-        if [ -z "$param" ]; then
-          some_arg="$param"
+        if [ -n "$param" ]; then
+          debug "first param $param"
         fi
         ;;
     esac
     shift
   done
-
-  echo "some_arg: $some_arg"
-  echo "say: $say"
-  echo "arg: $arg"
 }
 
 main "$@"

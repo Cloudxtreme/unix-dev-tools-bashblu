@@ -1,34 +1,23 @@
 #!/bin/bash
 
-DEBUG_KEY='bashblu'
-
-download_template() {
-  local template_name="$1"
-  local output_dir="$2"
-  local script_name="$3"
-
-  local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
-  debug "downloading $base_uri/$template_name to $output_dir/${script_name}.sh"
-  curl -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output_dir/${script_name}.sh"
-}
-
-replace_in_stream() {
-  local key="$1"
-  local value="$(echo "$2" | sed -e 's/[\/&]/\\&/g')"
-  sed -e "s/\[$key\]/$value/"
-}
-
 debug() {
+  local debug_key='[script-name]'
+  local cyan='\033[0;36m'
+  local no_color='\033[0;0m'
   if [ -z "$DEBUG" ]; then
     return 0
   fi
-  local message="$1"
-  echo "$DEBUG_KEY: $message"
+  echo "$debug_key" | grep $DEBUG 2> /dev/null
+  if [ "$?" != "0" ]; then
+    return 0
+  fi
+  local message="$@"
+  (>&2 echo -e "[${cyan}${debug_key}${no_color}]: $message")
 }
 
 fatal() {
   local message="$1"
-  echo "Error: $message"
+  (>&2 echo "Error: $message")
   exit 1
 }
 
@@ -47,28 +36,45 @@ script_directory(){
   echo "$dir"
 }
 
+download_template() {
+  local template_name="$1"
+  local output="$2"
+  local script_name="$3"
+
+  local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
+  debug "downloading $base_uri/$template_name to $output"
+  curl --fail -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output"
+}
+
+replace_in_stream() {
+  local key="$1"
+  local value="$(echo "$2" | sed -e 's/[\/&]/\\&/g')"
+  sed -e "s/\[$key\]/$value/"
+}
+
 usage(){
   echo 'USAGE: bashblu <script-name>'
   echo ''
   echo 'Arguments:'
-  echo '  -o, --output       output folder path. Defaults to cwd'
-  echo '  -p, --project      generate standalone project files'
+  echo '  -o, --output       output path'
   echo '  -h, --help         print this help text'
   echo '  -v, --version      print the version'
 }
 
 version(){
   local directory="$(script_directory)"
-  local version=$(cat "$directory/VERSION")
 
-  echo "$version"
+  if [ -f "$directory/VERSION" ]; then
+    cat "$directory/VERSION"
+  else
+    echo "unknown"
+  fi
 }
 
 main() {
-  local project="false"
-  local output_dir=""
-
+  local output=""
   local script_name=""
+
   while [ "$1" != "" ]; do
     local param="$1"
     local value="$2"
@@ -81,12 +87,8 @@ main() {
         version
         exit 0
         ;;
-      -p | --project)
-        project="true"
-        ;;
       -o | --output)
-        output_dir="$value"
-        shift
+        output="$value"
         ;;
       *)
         if [ "${param::1}" == '-' ]; then
@@ -94,7 +96,7 @@ main() {
           usage
           exit 1
         fi
-        if [ -z "$script_name" ]; then
+        if [ -n "$script_name" ]; then
           script_name="${param/\.sh}"
         fi
         ;;
@@ -102,24 +104,16 @@ main() {
     shift
   done
 
-  if [ -z "$output_dir" ]; then
-    output_dir="$PWD"
-  fi 
-
-  if [ -f "$output_dir/${script_name}.sh" ]; then
-    fatal 'script already exists' 
+  if [ -z "$output" ]; then
+    output_dir="$PWD/${script_name}.sh"
   fi
 
-  if [ "$project" == "true" ]; then
-    download_template 'project-script.sh' "$output_dir" "$script_name" || fatal 'failed to download script template' 
-    chmod +x "$output_dir/${script_name}.sh" || fatal 'unable to make script exectuable'
-    if [ ! -f "$output_dir/VERSION" ]; then
-      echo '1.0.0' > "$output_dir/VERSION"
-    fi
-  else
-    download_template 'standalone-script.sh' "$output_dir" "$script_name" || fatal 'failed to download script template' 
-    chmod +x "$output_dir/${script_name}.sh" || fatal 'unable to make script exectuable'
+  if [ -f "$output" ]; then
+    fatal 'script already exists'
   fi
+
+  download_template 'basic-script.sh' "$output" "$script_name" || fatal 'failed to download script template'
+  chmod +x "$output" || fatal 'unable to make script exectuable'
 }
 
 main "$@"
