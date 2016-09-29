@@ -1,14 +1,15 @@
 #!/bin/bash
 
 debug() {
-  local debug_key='[script-name]'
+  local debug_key='bashblu'
   local cyan='\033[0;36m'
   local no_color='\033[0;0m'
   if [ -z "$DEBUG" ]; then
     return 0
   fi
-  echo "$debug_key" | grep $DEBUG 2> /dev/null
-  if [ "$?" != "0" ]; then
+  echo "$debug_key" | grep "$DEBUG"
+  local is_valid_debug="$?"
+  if [ "$debug_key" == '*' -a "$is_valid_debug" != "0" ]; then
     return 0
   fi
   local message="$@"
@@ -43,6 +44,7 @@ download_template() {
 
   local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
   debug "downloading $base_uri/$template_name to $output"
+  debug "replacing [script-name] with $script_name"
   curl --fail -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output"
 }
 
@@ -96,7 +98,7 @@ main() {
           usage
           exit 1
         fi
-        if [ -n "$script_name" ]; then
+        if [ -z "$script_name" -a -n "$param" ]; then
           script_name="${param/\.sh}"
         fi
         ;;

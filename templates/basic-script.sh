@@ -7,8 +7,9 @@ debug() {
   if [ -z "$DEBUG" ]; then
     return 0
   fi
-  echo "$debug_key" | grep $DEBUG 2> /dev/null
-  if [ "$?" != "0" ]; then
+  echo "$debug_key" | grep "$DEBUG"
+  local is_valid_debug="$?"
+  if [ "$debug_key" == '*' -a "$is_valid_debug" != "0" ]; then
     return 0
   fi
   local message="$@"
@@ -74,9 +75,6 @@ main() {
           echo "ERROR: unknown parameter \"$param\""
           usage
           exit 1
-        fi
-        if [ -n "$param" ]; then
-          debug "first param $param"
         fi
         ;;
     esac
