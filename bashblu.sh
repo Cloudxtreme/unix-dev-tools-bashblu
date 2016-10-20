@@ -1,19 +1,23 @@
 #!/bin/bash
 
+SCRIPT_NAME='bashblu'
+
+matches_debug() {
+  if [ -z "$DEBUG" ]; then
+    return 1
+  fi
+  if [[ $SCRIPT_NAME == $DEBUG ]]; then
+    return 0
+  fi
+  return 1
+}
+
 debug() {
-  local debug_key='bashblu'
   local cyan='\033[0;36m'
   local no_color='\033[0;0m'
-  if [ -z "$DEBUG" ]; then
-    return 0
-  fi
-  echo "$debug_key" | grep "$DEBUG"
-  local is_valid_debug="$?"
-  if [ "$debug_key" == '*' -a "$is_valid_debug" != "0" ]; then
-    return 0
-  fi
   local message="$@"
-  (>&2 echo -e "[${cyan}${debug_key}${no_color}]: $message")
+  matches_debug || return 0
+  (>&2 echo -e "[${cyan}${SCRIPT_NAME}${no_color}]: $message")
 }
 
 fatal() {
@@ -37,6 +41,26 @@ script_directory(){
   echo "$dir"
 }
 
+assert_required_params() {
+  local output="$1"
+
+  if [ -f "$output" ]; then
+    fatal 'script already exists'
+  fi
+
+  if [ -n "$output" ]; then
+    return 0
+  fi
+
+  usage
+
+  if [ -z "$output" ]; then
+    echo "Missing output argument"
+  fi
+
+  exit 1
+}
+
 download_template() {
   local template_name="$1"
   local output="$2"
@@ -44,7 +68,7 @@ download_template() {
 
   local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
   debug "downloading $base_uri/$template_name to $output"
-  debug "replacing [script-name] with $script_name"
+  debug "replacing [script-name] with '$script_name'"
   curl --fail -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output"
 }
 
@@ -55,12 +79,18 @@ replace_in_stream() {
 }
 
 usage(){
-  echo 'USAGE: bashblu <script-name>'
+  echo "USAGE: ${SCRIPT_NAME} <script-name>"
+  echo ''
+  echo 'Description: generate a bash script'
   echo ''
   echo 'Arguments:'
   echo '  -o, --output       output path'
   echo '  -h, --help         print this help text'
   echo '  -v, --version      print the version'
+  echo ''
+  echo 'Environment:'
+  echo '  DEBUG              print debug output'
+  echo ''
 }
 
 version(){
@@ -69,7 +99,7 @@ version(){
   if [ -f "$directory/VERSION" ]; then
     cat "$directory/VERSION"
   else
-    echo "unknown"
+    echo "unknown-version"
   fi
 }
 
@@ -91,6 +121,7 @@ main() {
         ;;
       -o | --output)
         output="$value"
+        shift
         ;;
       *)
         if [ "${param::1}" == '-' ]; then
@@ -98,7 +129,7 @@ main() {
           usage
           exit 1
         fi
-        if [ -z "$script_name" -a -n "$param" ]; then
+        if [ -z "$script_name" ]; then
           script_name="${param/\.sh}"
         fi
         ;;
@@ -110,9 +141,7 @@ main() {
     output="$PWD/${script_name}.sh"
   fi
 
-  if [ -f "$output" ]; then
-    fatal 'script already exists'
-  fi
+  assert_required_params "$output"
 
   download_template 'basic-script.sh' "$output" "$script_name" || fatal 'failed to download script template'
   chmod +x "$output" || fatal 'unable to make script exectuable'

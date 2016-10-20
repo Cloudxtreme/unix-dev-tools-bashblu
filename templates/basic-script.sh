@@ -1,25 +1,23 @@
 #!/bin/bash
 
-debug() {
-  local debug_key='[script-name]'
-  local cyan='\033[0;36m'
-  local no_color='\033[0;0m'
+SCRIPT_NAME='[script-name]'
+
+matches_debug() {
   if [ -z "$DEBUG" ]; then
+    return 1
+  fi
+  if [[ $SCRIPT_NAME == $DEBUG ]]; then
     return 0
   fi
-  echo "$debug_key" | grep "$DEBUG"
-  local is_valid_debug="$?"
-  if [ "$debug_key" == '*' -a "$is_valid_debug" != "0" ]; then
-    return 0
-  fi
-  local message="$@"
-  (>&2 echo -e "[${cyan}${debug_key}${no_color}]: $message")
+  return 1
 }
 
-fatal() {
-  local message="$1"
-  (>&2 echo "Error: $message")
-  exit 1
+debug() {
+  local cyan='\033[0;36m'
+  local no_color='\033[0;0m'
+  local message="$@"
+  matches_debug || return 0
+  (>&2 echo -e "[${cyan}${SCRIPT_NAME}${no_color}]: $message")
 }
 
 script_directory(){
@@ -37,14 +35,34 @@ script_directory(){
   echo "$dir"
 }
 
+assert_required_params() {
+  local example_arg="$1"
+
+  if [ -n "$example_arg" ]; then
+    return 0
+  fi
+
+  usage
+
+  if [ -z "$example_arg" ]; then
+    echo "Missing example_arg argument"
+  fi
+
+  exit 1
+}
+
 usage(){
-  echo 'USAGE: [script-name]'
+  echo "USAGE: ${SCRIPT_NAME}"
+  echo ''
+  echo 'Description: ...'
   echo ''
   echo 'Arguments:'
-  echo '  -h, --help         print this help text'
-  echo '  -v, --version      print the version'
+  echo '  -h, --help       print this help text'
+  echo '  -v, --version    print the version'
+  echo ''
   echo 'Environment:'
-  echo '  DEBUG              print debug output'
+  echo '  DEBUG            print debug output'
+  echo ''
 }
 
 version(){
@@ -53,11 +71,12 @@ version(){
   if [ -f "$directory/VERSION" ]; then
     cat "$directory/VERSION"
   else
-    echo "unknown"
+    echo "unknown-version"
   fi
 }
 
 main() {
+  # Define args up here
   while [ "$1" != "" ]; do
     local param="$1"
     local value="$2"
@@ -70,16 +89,33 @@ main() {
         version
         exit 0
         ;;
+      # Arg with value
+      # -x | --example)
+      #   example="$value"
+      #   shift
+      #   ;;
+      # Arg without value
+      # -e | --example-flag)
+      #   example_flag='true'
+      #   ;;
       *)
         if [ "${param::1}" == '-' ]; then
           echo "ERROR: unknown parameter \"$param\""
           usage
           exit 1
         fi
+        # Set main arguments
+        # if [ -z "$main_arg" ]; then
+        #   main_arg="$param"
+        # elif [ -z "$main_arg_2"]; then
+        #   main_arg_2="$param"
+        # fi
         ;;
     esac
     shift
   done
+
+  # assert_required_params "$example_arg"
 }
 
 main "$@"
