@@ -6,7 +6,7 @@ matches_debug() {
   if [ -z "$DEBUG" ]; then
     return 1
   fi
-  if [[ $SCRIPT_NAME == $DEBUG ]]; then
+  if [[ $SCRIPT_NAME == "$DEBUG" ]]; then
     return 0
   fi
   return 1
@@ -66,7 +66,8 @@ usage(){
 }
 
 version(){
-  local directory="$(script_directory)"
+  local directory
+  directory="$(script_directory)"
 
   if [ -f "$directory/VERSION" ]; then
     cat "$directory/VERSION"
