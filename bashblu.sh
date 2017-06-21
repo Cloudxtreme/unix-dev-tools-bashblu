@@ -43,35 +43,39 @@ script_directory(){
 }
 
 assert_required_params() {
-  local output="$1"
+  local output_filename script_name
+  output_filename="$1"
+  script_name="$2"
 
-  if [ -f "$output" ]; then
-    fatal 'script already exists'
+  if [ -f "$output_filename" ]; then
+    fatal "'$output_filename' script already exists"
   fi
 
-  if [ -n "$output" ]; then
+  if [ -n "$output_filename" ] && [ -n "$script_name" ]; then
     return 0
   fi
 
   usage
 
-  if [ -z "$output" ]; then
-    echo "Missing output argument"
+  if [ -z "$script_name" ]; then
+    echo "Missing <script-name> argument"
   fi
 
   exit 1
 }
 
-download_template() {
-  local base_uri output template_name script_name
-  template_name="$1"
-  output="$2"
-  script_name="$3"
-  base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
+get_template() {
+  # HOMEBREW HOOK: get_template
 
-  debug "downloading $base_uri/$template_name to $output"
-  debug "replacing [script-name] with '$script_name'"
-  curl --fail -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output"
+  cat "$(script_directory)/templates/basic-script.sh"
+}
+
+process_template() {
+  local template script_name
+  template="$1"
+  script_name="$2"
+
+  echo "$template" | replace_in_stream "script-name" "$script_name"
 }
 
 replace_in_stream() {
@@ -97,6 +101,7 @@ usage(){
 }
 
 version(){
+  # HOMEBREW HOOK: version
   local directory
   directory="$(script_directory)"
 
@@ -108,8 +113,8 @@ version(){
 }
 
 main() {
-  local output=""
-  local script_name=""
+  local output_filename
+  local script_name
 
   while [ "$1" != "" ]; do
     local param="$1"
@@ -124,7 +129,7 @@ main() {
         exit 0
         ;;
       -o | --output)
-        output="$value"
+        output_filename="$value"
         shift
         ;;
       *)
@@ -141,14 +146,17 @@ main() {
     shift
   done
 
-  if [ -z "$output" ]; then
-    output="$PWD/${script_name}.sh"
+  if [ -z "$output_filename" ] && [ -n "$script_name" ]; then
+    output_filename="$PWD/${script_name}.sh"
   fi
 
-  assert_required_params "$output"
+  assert_required_params "$output_filename" "$script_name"
 
-  download_template 'basic-script.sh' "$output" "$script_name" || fatal 'failed to download script template'
-  chmod +x "$output" || fatal 'unable to make script exectuable'
+
+  template="$(get_template)"                                    || fatal "failed to get template"
+  file_content="$(process_template "$template" "$script_name")" || fatal "failed to process template"
+  echo "$file_content" > "$output_filename"                     || fatal "failed to write to '$output_filename'"
+  chmod +x "$output_filename"                                   || fatal 'unable to make script exectuable'
 }
 
 main "$@"
