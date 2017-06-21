@@ -2,16 +2,6 @@
 
 SCRIPT_NAME='bashblu'
 
-matches_debug() {
-  if [ -z "$DEBUG" ]; then
-    return 1
-  fi
-  if [[ $SCRIPT_NAME == $DEBUG ]]; then
-    return 0
-  fi
-  return 1
-}
-
 debug() {
   local cyan='\033[0;36m'
   local no_color='\033[0;0m'
@@ -24,6 +14,17 @@ fatal() {
   local message="$1"
   (>&2 echo "Error: $message")
   exit 1
+}
+
+matches_debug() {
+  if [ -z "$DEBUG" ]; then
+    return 1
+  fi
+  # shellcheck disable=SC2053
+  if [[ $SCRIPT_NAME == $DEBUG ]]; then
+    return 0
+  fi
+  return 1
 }
 
 script_directory(){
@@ -62,19 +63,21 @@ assert_required_params() {
 }
 
 download_template() {
-  local template_name="$1"
-  local output="$2"
-  local script_name="$3"
+  local base_uri output template_name script_name
+  template_name="$1"
+  output="$2"
+  script_name="$3"
+  base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
 
-  local base_uri="https://raw.githubusercontent.com/octoblu/unix-dev-tools-bashblu/v$(version)/templates"
   debug "downloading $base_uri/$template_name to $output"
   debug "replacing [script-name] with '$script_name'"
   curl --fail -sSL "$base_uri/$template_name" | replace_in_stream "script-name" "$script_name" > "$output"
 }
 
 replace_in_stream() {
-  local key="$1"
-  local value="$(echo "$2" | sed -e 's/[\/&]/\\&/g')"
+  local key value
+  key="$1"
+  value="$(echo "$2" | sed -e 's/[\/&]/\\&/g')"
   sed -e "s/\[$key\]/$value/"
 }
 
@@ -94,7 +97,8 @@ usage(){
 }
 
 version(){
-  local directory="$(script_directory)"
+  local directory
+  directory="$(script_directory)"
 
   if [ -f "$directory/VERSION" ]; then
     cat "$directory/VERSION"

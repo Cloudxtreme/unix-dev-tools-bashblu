@@ -2,14 +2,20 @@
 
 SCRIPT_NAME='[script-name]'
 
-matches_debug() {
-  if [ -z "$DEBUG" ]; then
-    return 1
-  fi
-  if [[ $SCRIPT_NAME == "$DEBUG" ]]; then
+assert_required_params() {
+  local example_arg="$1"
+
+  if [ -n "$example_arg" ]; then
     return 0
   fi
-  return 1
+
+  usage
+
+  if [ -z "$example_arg" ]; then
+    echo "Missing example_arg argument"
+  fi
+
+  exit 1
 }
 
 debug() {
@@ -18,6 +24,26 @@ debug() {
   local message="$@"
   matches_debug || return 0
   (>&2 echo -e "[${cyan}${SCRIPT_NAME}${no_color}]: $message")
+}
+
+err_echo() {
+  echo "$@" 1>&2
+}
+
+fatal() {
+  err_echo "$@"
+  exit 1
+}
+
+matches_debug() {
+  if [ -z "$DEBUG" ]; then
+    return 1
+  fi
+  # shellcheck disable=2053
+  if [[ $SCRIPT_NAME == $DEBUG ]]; then
+    return 0
+  fi
+  return 1
 }
 
 script_directory(){
@@ -33,22 +59,6 @@ script_directory(){
   dir="$( cd -P "$( dirname "$source" )" && pwd )"
 
   echo "$dir"
-}
-
-assert_required_params() {
-  local example_arg="$1"
-
-  if [ -n "$example_arg" ]; then
-    return 0
-  fi
-
-  usage
-
-  if [ -z "$example_arg" ]; then
-    echo "Missing example_arg argument"
-  fi
-
-  exit 1
 }
 
 usage(){
@@ -79,8 +89,11 @@ version(){
 main() {
   # Define args up here
   while [ "$1" != "" ]; do
-    local param="$1"
-    local value="$2"
+    local param value
+    param="$1"
+    # shellcheck disable=2034
+    value="$2"
+
     case "$param" in
       -h | --help)
         usage
